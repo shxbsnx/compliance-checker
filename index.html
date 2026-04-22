@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1a1a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="合规检查">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>内容合规检查工具 - 抖音/小红书</title>
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5; 
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { 
+            text-align: center; 
+            color: #1a1a1a; 
+            margin-bottom: 8px;
+            font-size: 24px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .input-area {
+            width: 100%;
+            min-height: 150px;
+            border: 2px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 16px;
+            font-size: 16px;
+            resize: vertical;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        .input-area:focus {
+            outline: none;
+            border-color: #1a1a1a;
+        }
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        .btn {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #1a1a1a;
+            color: white;
+        }
+        .btn-primary:hover { background: #333; }
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #1a1a1a;
+        }
+        .btn-secondary:hover { background: #e5e5e5; }
+        .result-card {
+            display: none;
+        }
+        .risk-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .risk-safe { background: #d4edda; color: #155724; }
+        .risk-low { background: #fff3cd; color: #856404; }
+        .risk-medium { background: #ffe0b2; color: #e65100; }
+        .risk-high { background: #ffcdd2; color: #c62828; }
+        .risk-critical { background: #c62828; color: white; }
+        .score { 
+            font-size: 48px; 
+            font-weight: 800; 
+            text-align: center;
+            margin: 16px 0;
+        }
+        .score-safe { color: #155724; }
+        .score-low { color: #856404; }
+        .score-medium { color: #e65100; }
+        .score-high { color: #c62828; }
+        .score-critical { color: #c62828; }
+        .risk-detail {
+            margin-top: 16px;
+            padding: 16px;
+            background: #fafafa;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .risk-item {
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            font-size: 14px;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .risk-extreme { background: #ffcdd2; color: #c62828; }
+        .risk-absolute { background: #ffcdd2; color: #c62828; }
+        .risk-medical { background: #ffe0b2; color: #e65100; }
+        .risk-superstition { background: #f8d7da; color: #721c24; }
+        .risk-stimulus { background: #ffcdd2; color: #c62828; }
+        .risk-authority { background: #ffcdd2; color: #c62828; }
+        .risk-time { background: #fff3cd; color: #856404; }
+        .risk-cosmetic { background: #ffe0b2; color: #e65100; }
+        .category-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+            margin: 16px 0 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #eee;
+        }
+        .category-title:first-child { margin-top: 0; }
+        .suggestion {
+            background: #e8f4fd;
+            border-left: 4px solid #0066cc;
+            padding: 12px 16px;
+            border-radius: 0 6px 6px 0;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-top: 16px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+        .tab-bar {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 16px;
+            background: #f5f5f5;
+            padding: 4px;
+            border-radius: 8px;
+        }
+        .tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            color: #666;
+            transition: all 0.2s;
+        }
+        .tab.active {
+            background: white;
+            color: #1a1a1a;
+            font-weight: 600;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .quick-words {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .word-tag {
+            padding: 6px 12px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #666;
+        }
+        .history-item {
+            padding: 12px;
+            background: #fafafa;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .history-item:hover { background: #f0f0f0; }
+        .history-text {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .history-meta {
+            font-size: 12px;
+            color: #999;
+        }
+        .history-list { margin-top: 16px; }
+        .clear-history {
+            font-size: 12px;
+            color: #666;
+            background: none;
+            border: none;
+            cursor: pointer;
+            text-decoration: underline;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>内容合规检查工具</h1>
+        <p class="subtitle">抖音 / 小红书 · 实时风险检测</p>
+
+        <div class="card">
+            <div class="tab-bar">
+                <button class="tab active" onclick="switchTab('check')">📝 文本检查</button>
+                <button class="tab" onclick="switchTab('words')">📋 违禁词表</button>
+                <button class="tab" onclick="switchTab('history')">📜 检查历史</button>
+            </div>
+
+            <div id="tab-check">
+                <textarea 
+                    id="inputText" 
+                    class="input-area" 
+                    placeholder="粘贴你的文案到这里，点击检查按钮进行分析..."
+                ></textarea>
+                <div class="btn-row">
+                    <button class="btn btn-secondary" onclick="clearText()">清空</button>
+                    <button class="btn btn-primary" onclick="checkText()">检查风险</button>
+                </div>
+            </div>
+
+            <div id="tab-words" style="display:none;">
+                <div class="category-title">极限用语</div>
+                <div class="quick-words">
+                    <span class="word-tag">国家级</span><span class="word-tag">最高级</span>
+                    <span class="word-tag">第一</span><span class="word-tag">唯一</span>
+                    <span class="word-tag">顶级</span><span class="word-tag">独家</span>
+                    <span class="word-tag">金牌</span><span class="word-tag">王牌</span>
+                    <span class="word-tag">极致</span><span class="word-tag">万能</span>
+                    <span class="word-tag">全网销量第一</span><span class="word-tag">世界领先</span>
+                </div>
+                <div class="category-title">绝对化用语</div>
+                <div class="quick-words">
+                    <span class="word-tag">100%</span><span class="word-tag">纯天然</span>
+                    <span class="word-tag">最佳</span><span class="word-tag">最好</span>
+                    <span class="word-tag">最高级</span><span class="word-tag">绝对</span>
+                </div>
+                <div class="category-title">医疗/功效词</div>
+                <div class="quick-words">
+                    <span class="word-tag">减肥</span><span class="word-tag">消炎</span>
+                    <span class="word-tag">抗敏</span><span class="word-tag">壮阳</span>
+                    <span class="word-tag">助眠</span><span class="word-tag">治疗</span>
+                    <span class="word-tag">抗癌</span><span class="word-tag">降血压</span>
+                    <span class="word-tag">祛疤</span><span class="word-tag">生发</span>
+                    <span class="word-tag">丰乳</span><span class="word-tag">瘦身</span>
+                    <span class="word-tag">速效</span><span class="word-tag">高效</span>
+                </div>
+                <div class="category-title">迷信用语</div>
+                <div class="quick-words">
+                    <span class="word-tag">招财进宝</span><span class="word-tag">旺财</span>
+                    <span class="word-tag">化解小人</span><span class="word-tag">辟邪</span>
+                    <span class="word-tag">护身</span><span class="word-tag">时来运转</span>
+                </div>
+                <div class="category-title">刺激消费词</div>
+                <div class="quick-words">
+                    <span class="word-tag">秒杀</span><span class="word-tag">抢爆</span>
+                    <span class="word-tag">再不抢就没了</span><span class="word-tag">万人疯抢</span>
+                </div>
+            </div>
+
+            <div id="tab-history" style="display:none;">
+                <div id="historyList"></div>
+                <button class="clear-history" onclick="clearHistory()">清空历史记录</button>
+            </div>
+        </div>
+
+        <div id="resultCard" class="card result-card">
+            <div style="text-align:center;">
+                <div id="riskBadge" class="risk-badge"></div>
+            </div>
+            <div id="scoreNum" class="score"></div>
+            <div id="riskDetail" class="risk-detail"></div>
+            <div id="suggestion" class="suggestion"></div>
+        </div>
+    </div>
+
+    <script>
+        // 违禁词库
+        const FORBIDDEN_WORDS = {
+            extreme: {
+                name: '极限用语',
+                words: ['国家级','世界级','最高级','第一','唯一','首个','首选','顶级','独家','首家','最新','最先进','第一品牌','金牌','名牌','优秀','全网销量第一','全国首发','全球首发','世界领先','极致','永久','王牌','掌门人','领袖品牌','独一无二','绝无仅有','史无前例','万能','极致','王牌'],
+                score: 10
+            },
+            absolute: {
+                name: '绝对化用语',
+                words: ['最高','最低','最具','最便宜','最佳','最大','最大程度','最新技术','最先进科学','最时尚','最受欢迎','100%','纯天然','纯植物','国际品质','高档','正品','绝对值','精确','超赚'],
+                score: 10
+            },
+            medical: {
+                name: '疑似医疗用语',
+                words: ['减肥','消炎','抗敏','脱敏','壮阳','滋阴补阳','清热解毒','清热祛湿','治疗','除湿','防癌','抗癌','祛疤','降血压','防治高血压','助眠','失眠','调节内分泌','改善敏感','改善过敏','活血','解毒','镇定','镇静','理气','行气','补血','安神','养脑','益气','利尿','延缓更年期','补肾','祛风','生发','止脱','生发止脱','美容治疗','消除斑点','斑立净','无斑','斑秃','妊娠纹','毛发新生','毛发再生','生黑发','毛囊激活','伤口愈合','消炎','抗炎','杀菌','抗菌','灭菌','防菌','消毒','排毒','防敏','柔敏','舒敏','缓敏','褪敏','降低肌肤敏感度','胃胀蠕动','驱寒','平衡荷尔蒙','去除体内毒素','吸附铅汞','润燥','腋臭','体臭','阴臭','刀伤','烧伤','烫伤','疮痈','毛囊炎','皮肤感染','丘疹','脓疱','手癣','甲癣','体癣','头癣','股癣','脚癣','脚气','鹅掌癣','花斑癣','牛皮癣','传染性湿疹','伤风感冒','经痛','肌痛','头痛','腹痛','便秘','哮喘','支气管炎','消化不良','细菌','真菌','念珠菌','糠秕孢子菌','厌氧菌','牙孢菌','痤疮','毛囊寄生虫','雌性激素','雄性激素','荷尔蒙','抗生素','激素','药物','中草药','中枢神经','细胞再生','细胞增殖','免疫力','患处','疤痕','关节痛','冻疮','冻伤','红肿','淋巴液','毛细血管','淋巴毒'],
+                score: 15
+            },
+            superstition: {
+                name: '迷信用语',
+                words: ['招财进宝','旺人','旺财','化解小人','提升运气','有助事业','护身','平衡正负能量','消除精神压力','调和气压','逢凶化吉','时来运转','万事亨通','助吉避凶','转富招福','增强第六感','增加事业运','健康富贵','带来好运气'],
+                score: 20
+            },
+            stimulus: {
+                name: '刺激消费词',
+                words: ['秒杀','抢爆','再不抢就没了','不会再便宜了','错过就没机会了','万人疯抢','抢疯了'],
+                score: 10
+            },
+            authority: {
+                name: '违禁权威性词',
+                words: ['国家领导人推荐','国家机关推荐','特供','专供','老字号','中国驰名商标','质量免检','无需国家质量检测','免抽检'],
+                score: 15
+            },
+            time: {
+                name: '违禁时限词',
+                words: ['随时结束','仅此一次','随时涨价','马上降价','最后一波'],
+                score: 5
+            },
+            cosmetic: {
+                name: '化妆品虚假宣传',
+                words: ['特效','高效','全效','强效','速效','速白','一洗白','天见效','周期见效','超强','激活','全方位','全面','安全','无毒','溶脂',' liposuction','燃烧脂肪','瘦身','瘦脸','瘦腿','延年益寿','提高记忆力','提高肌肤抗刺激','消除','清除','化解死细胞','去皱纹','平皱','修复断裂弹性','止脱','永不褪色','迅速修复','更新肌肤','破坏黑色素细胞','阻断黑色素','丰乳','丰满','乳房丰满','预防乳房松弛下垂','改善睡眠','舒眠'],
+                score: 10
+            }
+        };
+
+        let history = JSON.parse(localStorage.getItem('complianceHistory') || '[]');
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('tab-check').style.display = tab === 'check' ? 'block' : 'none';
+            document.getElementById('tab-words').style.display = tab === 'words' ? 'block' : 'none';
+            document.getElementById('tab-history').style.display = tab === 'history' ? 'block' : 'none';
+            if (tab === 'history') renderHistory();
+        }
+
+        function checkText() {
+            const text = document.getElementById('inputText').value.trim();
+            if (!text) {
+                alert('请输入要检查的文案');
+                return;
+            }
+
+            const found = {};
+            let totalScore = 0;
+
+            for (const [key, category] of Object.entries(FORBIDDEN_WORDS)) {
+                const matched = category.words.filter(word => text.includes(word));
+                if (matched.length > 0) {
+                    found[key] = { ...category, matched };
+                    totalScore += category.score * matched.length;
+                }
+            }
+
+            // Cap at 100
+            totalScore = Math.min(totalScore, 100);
+
+            // Determine risk level
+            let riskLevel, riskClass;
+            if (totalScore === 0) {
+                riskLevel = '✅ 安全';
+                riskClass = 'safe';
+            } else if (totalScore <= 9) {
+                riskLevel = '⚠️ 低风险';
+                riskClass = 'low';
+            } else if (totalScore <= 29) {
+                riskLevel = '🟡 中等风险';
+                riskClass = 'medium';
+            } else if (totalScore <= 49) {
+                riskLevel = '🔴 高风险';
+                riskClass = 'high';
+            } else {
+                riskLevel = '⛔ 严重违规';
+                riskClass = 'critical';
+            }
+
+            // Render result
+            document.getElementById('resultCard').style.display = 'block';
+            document.getElementById('riskBadge').className = 'risk-badge risk-' + riskClass;
+            document.getElementById('riskBadge').textContent = riskLevel;
+            document.getElementById('scoreNum').textContent = totalScore + ' 分';
+            document.getElementById('scoreNum').className = 'score score-' + riskClass;
+
+            // Render details
+            let detailHtml = '';
+            for (const [key, cat] of Object.entries(found)) {
+                detailHtml += `<div class="category-title">${cat.name}（扣${cat.score}分×${cat.matched.length}）</div>`;
+                cat.matched.forEach(word => {
+                    detailHtml += `<div class="risk-item risk-${key}">❌ ${word}</div>`;
+                });
+            }
+            if (Object.keys(found).length === 0) {
+                detailHtml = '<div class="empty-state">🎉 未发现违禁词，继续保持！</div>';
+            }
+            document.getElementById('riskDetail').innerHTML = detailHtml;
+
+            // Suggestion
+            let suggestion = '';
+            if (totalScore === 0) {
+                suggestion = '✅ 您的文案通过了全部合规检查，可以正常发布。';
+            } else if (riskClass === 'critical') {
+                suggestion = '🚨 严重违规！建议重新撰写文案，避开所有红线后再提交。';
+            } else if (riskClass === 'high') {
+                suggestion = '🔴 高风险文案。建议：1) 替换所有违禁词为中性表达；2) 避免绝对化承诺；3) 确保内容符合平台价值观导向。';
+            } else if (riskClass === 'medium') {
+                suggestion = '🟡 中等风险。建议检查并替换标注的违禁词后发布。';
+            } else {
+                suggestion = '⚠️ 低风险。建议简单修改后发布。';
+            }
+            document.getElementById('suggestion').textContent = suggestion;
+
+            // Save to history
+            history.unshift({
+                text: text.substring(0, 100),
+                fullText: text,
+                score: totalScore,
+                risk: riskLevel,
+                time: new Date().toLocaleString('zh-CN')
+            });
+            history = history.slice(0, 20);
+            localStorage.setItem('complianceHistory', JSON.stringify(history));
+        }
+
+        function clearText() {
+            document.getElementById('inputText').value = '';
+            document.getElementById('resultCard').style.display = 'none';
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            if (history.length === 0) {
+                list.innerHTML = '<div class="empty-state">暂无检查历史</div>';
+                return;
+            }
+            list.innerHTML = history.map((item, i) => `
+                <div class="history-item" onclick="loadHistory(${i})">
+                    <div class="history-text">${item.text}</div>
+                    <div class="history-meta">${item.time} · ${item.risk} · ${item.score}分</div>
+                </div>
+            `).join('');
+        }
+
+        function loadHistory(index) {
+            document.getElementById('inputText').value = history[index].fullText;
+            switchTab('check');
+            document.querySelectorAll('.tab')[0].classList.add('active');
+            document.querySelectorAll('.tab')[1].classList.remove('active');
+            document.querySelectorAll('.tab')[2].classList.remove('active');
+        }
+
+        function clearHistory() {
+            history = [];
+            localStorage.removeItem('complianceHistory');
+            renderHistory();
+        }
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('SW registered'))
+                    .catch(err => console.log('SW registration failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>
